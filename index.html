@@ -10,57 +10,54 @@
         #ad-top { top: 0; } #ad-bottom { bottom: 0; }
         iframe { border: none; width: 100%; height: 150px; }
         
-        /* メインコンテナの高さ調整 */
-        #main-container { margin-top: 150px; height: calc(100vh - 300px); position: relative; display: flex; flex-direction: column; align-items: center; justify-content: flex-start; }
+        #main-container { margin-top: 150px; height: calc(100vh - 300px); position: relative; display: flex; flex-direction: column; align-items: center; }
         
-        #ui { padding: 10px; font-size: 20px; font-weight: bold; color: #f57f17; }
-        
-        /* グリッドを画面サイズに合わせて可変に */
-        #grid { 
-            display: grid; 
-            grid-template-columns: repeat(6, 1fr); 
-            gap: 4px; 
-            padding: 5px; 
-            width: 95%; 
-            max-width: 360px;
-        }
+        /* UIエリア */
+        #header-ui { width: 100%; display: flex; justify-content: space-around; padding: 10px 0; }
+        .info-box { font-size: 18px; font-weight: bold; color: #f57f17; background: white; padding: 5px 12px; border-radius: 15px; box-shadow: 0 2px #fbc02d; }
+        #timer-text { color: #e91e63; }
+
+        #grid { display: grid; grid-template-columns: repeat(6, 1fr); gap: 5px; padding: 10px; width: 90%; max-width: 360px; }
         .cell { 
-            aspect-ratio: 1/1; /* 正方形を維持 */
-            display: flex; align-items: center; justify-content: center; 
-            font-size: 22px; background: white; border-radius: 8px; 
-            box-shadow: 0 3px #fbc02d; cursor: pointer;
+            aspect-ratio: 1/1; display: flex; align-items: center; justify-content: center; 
+            font-size: 24px; background: white; border-radius: 8px; box-shadow: 0 3px #fbc02d; cursor: pointer;
         }
-        
+        /* 正解表示用のスタイル */
+        .cell.correct-answer { background: #ffeb3b !important; border: 3px solid #e91e63; box-shadow: 0 0 10px #e91e63; z-index: 10; transform: scale(1.1); }
+
         #end-menu { 
             position: absolute; top: 0; left: 0; width: 100%; height: 100%; 
-            background: rgba(255,255,255,0.95); display: flex; flex-direction: column; 
+            background: rgba(255,255,255,0.92); display: flex; flex-direction: column; 
             align-items: center; justify-content: center; z-index: 60; 
         }
         .menu-btn { width: 220px; padding: 15px; margin: 10px; font-size: 20px; border: none; border-radius: 30px; font-weight: bold; cursor: pointer; text-decoration: none; text-align: center; }
-        #retry-btn { background: #fbc02d; color: #333; box-shadow: 0 5px #f57f17; }
-        #more-games-btn { background: #ff4081; color: white; box-shadow: 0 5px #c2185b; }
+        #retry-btn { background: #fbc02d; color: #333; box-shadow: 0 4px #f57f17; }
+        #more-games-btn { background: #ff4081; color: white; box-shadow: 0 4px #c2185b; }
     </style>
 </head>
 <body>
-    <div id="ad-top"><iframe src="ad.html"></iframe></div>
-    <div id="ad-bottom"><iframe src="ad.html"></iframe></div>
+    <div id="ad-top"><iframe id="frame-top" src="ad.html"></iframe></div>
+    <div id="ad-bottom"><iframe id="frame-bottom" src="ad.html"></iframe></div>
     
     <div id="main-container">
-        <div id="ui">SCORE: 0</div>
-        <div style="font-weight:bold; color:#f57f17; margin-bottom: 5px;">仲間はずれを探せ！</div>
-        
+        <div id="header-ui">
+            <div id="ui" class="info-box">SCORE: 0</div>
+            <div id="timer-text" class="info-box">残り: 7.0s</div>
+        </div>
+        <div style="font-weight:bold; color:#f57f17; margin-bottom: 5px;">仲間はずれをタップ！</div>
         <div id="grid"></div>
 
         <div id="end-menu">
-            <h2 id="result-msg" style="color:#f57f17; text-align:center;">仲間はずれ探し</h2>
+            <h2 id="result-msg">Target Search</h2>
             <button id="retry-btn" class="menu-btn" onclick="startNewGame()">スタート！</button>
             <a href="https://saaaachi.github.io/Make10/" id="more-games-btn" class="menu-btn">他のゲームはこちら</a>
         </div>
     </div>
 
     <script>
-        let score = 0, gameActive = false, timer;
-        const chars = ["大", "太", "犬", "天", "矢", "失", "白", "百", "問", "間", "己", "已", "徴", "微"];
+        let score = 0, gameActive = false, timer, timeLeft, countdownInterval;
+        let targetElement = null; // 正解の要素を保存用
+        const chars = ["大", "太", "犬", "天", "矢", "失", "白", "百", "問", "間", "己", "已", "徴", "微", "幸", "辛"];
 
         function startNewGame() {
             document.getElementById("end-menu").style.display = "none";
@@ -82,6 +79,8 @@
                 const cell = document.createElement("div");
                 cell.className = "cell";
                 cell.innerText = (i === targetIdx) ? target : base;
+                if(i === targetIdx) targetElement = cell; // 正解を記憶
+                
                 cell.onclick = () => {
                     if(!gameActive) return;
                     if(i === targetIdx) { 
@@ -89,36 +88,62 @@
                         document.getElementById("ui").innerText = "SCORE: " + score; 
                         nextLevel(); 
                     } else { 
-                        gameOver("残念！ちがうよ😱"); 
+                        gameOver("ちがうよ！😱"); 
                     }
                 };
                 grid.appendChild(cell);
             }
-            clearTimeout(timer);
-            // 制限時間：最初は5秒、徐々に短くなる（最低1.2秒）
-            timer = setTimeout(() => { gameOver("時間切れ！⏳"); }, Math.max(1200, 5000 - score * 150));
+
+            // 制限時間の調整（最初はゆったり7秒、徐々に短くなる。最低2秒）
+            timeLeft = Math.max(2.0, 7.0 - (score * 0.3));
+            startCountdown();
+        }
+
+        function startCountdown() {
+            clearInterval(countdownInterval);
+            updateTimerText();
+            countdownInterval = setInterval(() => {
+                timeLeft -= 0.1;
+                updateTimerText();
+                if(timeLeft <= 0) {
+                    clearInterval(countdownInterval);
+                    gameOver("時間切れ！⏳");
+                }
+            }, 100);
+        }
+
+        function updateTimerText() {
+            document.getElementById("timer-text").innerText = "残り: " + Math.max(0, timeLeft).toFixed(1) + "s";
         }
 
         function gameOver(msg) {
             gameActive = false;
-            clearTimeout(timer);
-            document.getElementById("result-msg").innerText = msg + "\nSCORE: " + score;
-            document.getElementById("end-menu").style.display = "flex";
-            document.getElementById("retry-btn").innerText = "もう一度遊ぶ";
+            clearInterval(countdownInterval);
+            
+            // 正解のマスを目立たせる
+            if(targetElement) targetElement.classList.add('correct-answer');
+
+            // 1秒待ってからメニューを表示（正解を確認する時間を作る）
+            setTimeout(() => {
+                document.getElementById("result-msg").innerText = msg + "\nSCORE: " + score;
+                document.getElementById("end-menu").style.display = "flex";
+                document.getElementById("retry-btn").innerText = "もう一度遊ぶ";
+            }, 1200);
         }
+
+        // 広告更新ロジックをより確実に
+        function refreshAds() {
+            const top = document.getElementById('frame-top');
+            const bottom = document.getElementById('frame-bottom');
+            if(top) top.src = top.src;
+            if(bottom) bottom.src = bottom.src;
+            console.log("Ads Refreshed");
+        }
+        setInterval(refreshAds, 30000);
 
         window.onload = () => { 
             document.getElementById("end-menu").style.display = "flex"; 
         };
-
-        // 30秒ごとに広告（iframe）をリロード
-        setInterval(() => {
-            const fs = document.querySelectorAll('iframe');
-            fs.forEach(f => {
-                const s = f.src; f.src = "about:blank";
-                setTimeout(() => f.src = s, 100);
-            });
-        }, 30000);
     </script>
 </body>
 </html>
