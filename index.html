@@ -9,39 +9,58 @@
         #ad-top, #ad-bottom { position: fixed; left: 0; width: 100%; height: 150px; background: #333; z-index: 100; display: flex; align-items: center; justify-content: center; }
         #ad-top { top: 0; } #ad-bottom { bottom: 0; }
         iframe { border: none; width: 100%; height: 150px; }
-        #main-container { margin-top: 150px; height: calc(100vh - 300px); position: relative; display: flex; flex-direction: column; align-items: center; }
-        #ui { padding: 10px; font-size: 22px; font-weight: bold; color: #f57f17; }
-        #grid { display: grid; grid-template-columns: repeat(6, 1fr); gap: 5px; padding: 10px; }
-        .cell { 
-            width: 50px; height: 50px; display: flex; align-items: center; justify-content: center; 
-            font-size: 24px; background: white; border-radius: 8px; box-shadow: 0 2px #fbc02d; cursor: pointer;
+        
+        /* メインコンテナの高さ調整 */
+        #main-container { margin-top: 150px; height: calc(100vh - 300px); position: relative; display: flex; flex-direction: column; align-items: center; justify-content: flex-start; }
+        
+        #ui { padding: 10px; font-size: 20px; font-weight: bold; color: #f57f17; }
+        
+        /* グリッドを画面サイズに合わせて可変に */
+        #grid { 
+            display: grid; 
+            grid-template-columns: repeat(6, 1fr); 
+            gap: 4px; 
+            padding: 5px; 
+            width: 95%; 
+            max-width: 360px;
         }
+        .cell { 
+            aspect-ratio: 1/1; /* 正方形を維持 */
+            display: flex; align-items: center; justify-content: center; 
+            font-size: 22px; background: white; border-radius: 8px; 
+            box-shadow: 0 3px #fbc02d; cursor: pointer;
+        }
+        
         #end-menu { 
             position: absolute; top: 0; left: 0; width: 100%; height: 100%; 
             background: rgba(255,255,255,0.95); display: flex; flex-direction: column; 
             align-items: center; justify-content: center; z-index: 60; 
         }
         .menu-btn { width: 220px; padding: 15px; margin: 10px; font-size: 20px; border: none; border-radius: 30px; font-weight: bold; cursor: pointer; text-decoration: none; text-align: center; }
-        #retry-btn { background: #fbc02d; color: #333; }
-        #more-games-btn { background: #ff4081; color: white; }
+        #retry-btn { background: #fbc02d; color: #333; box-shadow: 0 5px #f57f17; }
+        #more-games-btn { background: #ff4081; color: white; box-shadow: 0 5px #c2185b; }
     </style>
 </head>
 <body>
     <div id="ad-top"><iframe src="ad.html"></iframe></div>
     <div id="ad-bottom"><iframe src="ad.html"></iframe></div>
+    
     <div id="main-container">
         <div id="ui">SCORE: 0</div>
-        <div style="font-weight:bold; color:#f57f17;">仲間はずれを探せ！</div>
+        <div style="font-weight:bold; color:#f57f17; margin-bottom: 5px;">仲間はずれを探せ！</div>
+        
         <div id="grid"></div>
+
         <div id="end-menu">
-            <h2 id="result-msg">Target Search</h2>
+            <h2 id="result-msg" style="color:#f57f17; text-align:center;">仲間はずれ探し</h2>
             <button id="retry-btn" class="menu-btn" onclick="startNewGame()">スタート！</button>
             <a href="https://saaaachi.github.io/Make10/" id="more-games-btn" class="menu-btn">他のゲームはこちら</a>
         </div>
     </div>
+
     <script>
         let score = 0, gameActive = false, timer;
-        const chars = ["大", "太", "犬", "天", "矢", "失", "白", "百", "問", "間"];
+        const chars = ["大", "太", "犬", "天", "矢", "失", "白", "百", "問", "間", "己", "已", "徴", "微"];
 
         function startNewGame() {
             document.getElementById("end-menu").style.display = "none";
@@ -51,11 +70,12 @@
         }
 
         function nextLevel() {
+            if(!gameActive) return;
             const grid = document.getElementById("grid");
             grid.innerHTML = "";
-            const pair = Math.floor(Math.random() * (chars.length/2)) * 2;
-            const base = chars[pair];
-            const target = chars[pair+1];
+            const pairIdx = Math.floor(Math.random() * (chars.length / 2)) * 2;
+            const base = chars[pairIdx];
+            const target = chars[pairIdx + 1];
             const targetIdx = Math.floor(Math.random() * 36);
 
             for(let i=0; i<36; i++) {
@@ -64,22 +84,41 @@
                 cell.innerText = (i === targetIdx) ? target : base;
                 cell.onclick = () => {
                     if(!gameActive) return;
-                    if(i === targetIdx) { score++; document.getElementById("ui").innerText = "SCORE:"+score; nextLevel(); }
-                    else { gameOver("残念！"); }
+                    if(i === targetIdx) { 
+                        score++; 
+                        document.getElementById("ui").innerText = "SCORE: " + score; 
+                        nextLevel(); 
+                    } else { 
+                        gameOver("残念！ちがうよ😱"); 
+                    }
                 };
                 grid.appendChild(cell);
             }
             clearTimeout(timer);
-            timer = setTimeout(() => { gameOver("時間切れ！⏳"); }, Math.max(1000, 5000 - score*200));
+            // 制限時間：最初は5秒、徐々に短くなる（最低1.2秒）
+            timer = setTimeout(() => { gameOver("時間切れ！⏳"); }, Math.max(1200, 5000 - score * 150));
         }
 
         function gameOver(msg) {
             gameActive = false;
+            clearTimeout(timer);
             document.getElementById("result-msg").innerText = msg + "\nSCORE: " + score;
             document.getElementById("end-menu").style.display = "flex";
             document.getElementById("retry-btn").innerText = "もう一度遊ぶ";
         }
-        window.onload = () => { document.getElementById("end-menu").style.display = "flex"; };
+
+        window.onload = () => { 
+            document.getElementById("end-menu").style.display = "flex"; 
+        };
+
+        // 30秒ごとに広告（iframe）をリロード
+        setInterval(() => {
+            const fs = document.querySelectorAll('iframe');
+            fs.forEach(f => {
+                const s = f.src; f.src = "about:blank";
+                setTimeout(() => f.src = s, 100);
+            });
+        }, 30000);
     </script>
 </body>
 </html>
