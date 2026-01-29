@@ -5,62 +5,99 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>Hidden Target - 第33弾</title>
     <style>
-        body { margin: 0; overflow: hidden; background: #fffde7; font-family: sans-serif; touch-action: none; }
-        #ad-top, #ad-bottom { position: fixed; left: 0; width: 100%; height: 150px; background: #333; z-index: 100; display: flex; align-items: center; justify-content: center; }
-        #ad-top { top: 0; } #ad-bottom { bottom: 0; }
-        iframe { border: none; width: 100%; height: 150px; }
+        * { box-sizing: border-box; }
+        body { margin: 0; overflow: hidden; background: #fffde7; font-family: sans-serif; touch-action: none; position: fixed; width: 100%; height: 100%; }
         
-        #main-container { margin-top: 150px; height: calc(100vh - 300px); position: relative; display: flex; flex-direction: column; align-items: center; }
+        /* 広告枠：100px */
+        #ad-top, #ad-bottom { position: fixed; left: 0; width: 100%; height: 100px; background: #333; z-index: 100; display: flex; align-items: center; justify-content: center; }
+        #ad-top { top: 0; } #ad-bottom { bottom: 0; }
+        iframe { border: none; width: 100%; height: 100px; }
+
+        /* ゲーム本体エリア */
+        #game-outer { position: absolute; top: 100px; bottom: 100px; left: 0; right: 0; background: #fffde7; overflow: hidden; }
+        #main-container { height: 100%; display: flex; flex-direction: column; align-items: center; justify-content: center; position: relative; }
         
         /* UIエリア */
-        #header-ui { width: 100%; display: flex; justify-content: space-around; padding: 10px 0; }
-        .info-box { font-size: 18px; font-weight: bold; color: #f57f17; background: white; padding: 5px 12px; border-radius: 15px; box-shadow: 0 2px #fbc02d; }
+        #header-ui { width: 100%; display: flex; justify-content: space-around; padding: 5px 0; z-index: 10; }
+        .info-box { font-size: 16px; font-weight: bold; color: #f57f17; background: white; padding: 4px 10px; border-radius: 12px; box-shadow: 0 2px #fbc02d; }
         #timer-text { color: #e91e63; }
 
-        #grid { display: grid; grid-template-columns: repeat(6, 1fr); gap: 5px; padding: 10px; width: 90%; max-width: 360px; }
+        /* グリッド：スマホ画面に収まるよう調整 */
+        #grid { 
+            display: grid; grid-template-columns: repeat(6, 1fr); gap: 4px; 
+            padding: 8px; width: 95%; max-width: 340px; 
+        }
         .cell { 
             aspect-ratio: 1/1; display: flex; align-items: center; justify-content: center; 
-            font-size: 24px; background: white; border-radius: 8px; box-shadow: 0 3px #fbc02d; cursor: pointer;
+            font-size: 22px; background: white; border-radius: 6px; box-shadow: 0 3px #fbc02d; 
+            cursor: pointer; user-select: none;
         }
+        .cell:active { transform: scale(0.95); }
+        
         /* 正解表示用のスタイル */
         .cell.correct-answer { background: #ffeb3b !important; border: 3px solid #e91e63; box-shadow: 0 0 10px #e91e63; z-index: 10; transform: scale(1.1); }
 
-        #end-menu { 
+        /* メニュー画面：スクロール対応 */
+        #menuScreen { 
             position: absolute; top: 0; left: 0; width: 100%; height: 100%; 
-            background: rgba(255,255,255,0.92); display: flex; flex-direction: column; 
-            align-items: center; justify-content: center; z-index: 60; 
+            background: rgba(255,255,255,0.96); display: flex; flex-direction: column; 
+            align-items: center; justify-content: flex-start; z-index: 50; 
+            padding: 5px 0; overflow-y: auto; -webkit-overflow-scrolling: touch;
         }
-        .menu-btn { width: 220px; padding: 15px; margin: 10px; font-size: 20px; border: none; border-radius: 30px; font-weight: bold; cursor: pointer; text-decoration: none; text-align: center; }
+
+        #ad-middle-container { width: 300px; height: 120px; background: #000; margin: 5px 0; display: none; justify-content: center; align-items: center; overflow: hidden; flex-shrink: 0; }
+
+        .menu-btn-group { display: flex; flex-direction: column; align-items: center; width: 100%; gap: 8px; padding-bottom: 20px; }
+        .menu-btn { width: 220px; padding: 12px; font-size: 18px; border: none; border-radius: 30px; font-weight: bold; cursor: pointer; text-decoration: none; text-align: center; }
         #retry-btn { background: #fbc02d; color: #333; box-shadow: 0 4px #f57f17; }
         #more-games-btn { background: #ff4081; color: white; box-shadow: 0 4px #c2185b; }
     </style>
 </head>
 <body>
-    <div id="ad-top"><iframe id="frame-top" src="ad.html"></iframe></div>
-    <div id="ad-bottom"><iframe id="frame-bottom" src="ad.html"></iframe></div>
-    
-    <div id="main-container">
-        <div id="header-ui">
-            <div id="ui" class="info-box">SCORE: 0</div>
-            <div id="timer-text" class="info-box">残り: 7.0s</div>
-        </div>
-        <div style="font-weight:bold; color:#f57f17; margin-bottom: 5px;">仲間はずれをタップ！</div>
-        <div id="grid"></div>
 
-        <div id="end-menu">
-            <h2 id="result-msg">Target Search</h2>
-            <button id="retry-btn" class="menu-btn" onclick="startNewGame()">スタート！</button>
-            <a href="https://saaaachi.github.io/Make10/" id="more-games-btn" class="menu-btn">他のゲームはこちら</a>
+    <div id="ad-top"><iframe id="frame-top" src="ad.html"></iframe></div>
+
+    <div id="game-outer">
+        <div id="main-container">
+            <div id="header-ui">
+                <div id="ui" class="info-box">SCORE: 0</div>
+                <div id="timer-text" class="info-box">残り: 7.0s</div>
+            </div>
+            <div style="font-weight:bold; color:#f57f17; margin: 5px 0; font-size: 14px;">仲間はずれをタップ！</div>
+            <div id="grid"></div>
+
+            <div id="menuScreen">
+                <h2 id="result-msg" style="color:#f57f17; margin: 10px 0; font-size: 24px;">Target Search</h2>
+                <p style="font-size: 13px; color: #666; margin: 0; text-align: center;">1つだけ違う文字を探し出そう！</p>
+                
+                <div id="ad-middle-container">
+                    <script src="https://adm.shinobi.jp/s/1e6de436ea850948e238e975a93767eb"></script>
+                </div>
+
+                <div class="menu-btn-group">
+                    <button id="retry-btn" class="menu-btn" onclick="startNewGame()">スタート！</button>
+                    <a href="https://saaaachi.github.io/Make10/" id="more-games-btn" class="menu-btn">他のゲームはこちら</a>
+                </div>
+            </div>
         </div>
     </div>
 
+    <div id="ad-bottom"><iframe id="frame-bottom" src="ad.html"></iframe></div>
+
     <script>
-        let score = 0, gameActive = false, timer, timeLeft, countdownInterval;
-        let targetElement = null; // 正解の要素を保存用
-        const chars = ["大", "太", "犬", "天", "矢", "失", "白", "百", "問", "間", "己", "已", "徴", "微", "幸", "辛"];
+        let score = 0, gameActive = false, timeLeft, countdownInterval;
+        let targetElement = null;
+        const chars = ["大", "太", "犬", "天", "矢", "失", "白", "百", "問", "間", "己", "已", "徴", "微", "幸", "辛", "由", "甲", "買", "貝"];
+
+        const menuScreen = document.getElementById("menuScreen");
+        const adMid = document.getElementById("ad-middle-container");
+        const resultMsg = document.getElementById("result-msg");
+        const retryBtn = document.getElementById("retry-btn");
+        const grid = document.getElementById("grid");
 
         function startNewGame() {
-            document.getElementById("end-menu").style.display = "none";
+            menuScreen.style.display = "none";
+            adMid.style.display = "none";
             score = 0; gameActive = true;
             document.getElementById("ui").innerText = "SCORE: 0";
             nextLevel();
@@ -68,7 +105,6 @@
 
         function nextLevel() {
             if(!gameActive) return;
-            const grid = document.getElementById("grid");
             grid.innerHTML = "";
             const pairIdx = Math.floor(Math.random() * (chars.length / 2)) * 2;
             const base = chars[pairIdx];
@@ -79,7 +115,7 @@
                 const cell = document.createElement("div");
                 cell.className = "cell";
                 cell.innerText = (i === targetIdx) ? target : base;
-                if(i === targetIdx) targetElement = cell; // 正解を記憶
+                if(i === targetIdx) targetElement = cell;
                 
                 cell.onclick = () => {
                     if(!gameActive) return;
@@ -94,8 +130,7 @@
                 grid.appendChild(cell);
             }
 
-            // 制限時間の調整（最初はゆったり7秒、徐々に短くなる。最低2秒）
-            timeLeft = Math.max(2.0, 7.0 - (score * 0.3));
+            timeLeft = Math.max(1.8, 7.0 - (score * 0.35)); // 難易度上昇を少し早めに
             startCountdown();
         }
 
@@ -120,30 +155,26 @@
             gameActive = false;
             clearInterval(countdownInterval);
             
-            // 正解のマスを目立たせる
             if(targetElement) targetElement.classList.add('correct-answer');
 
-            // 1秒待ってからメニューを表示（正解を確認する時間を作る）
             setTimeout(() => {
-                document.getElementById("result-msg").innerText = msg + "\nSCORE: " + score;
-                document.getElementById("end-menu").style.display = "flex";
-                document.getElementById("retry-btn").innerText = "もう一度遊ぶ";
+                resultMsg.innerText = msg + "\nSCORE: " + score;
+                retryBtn.innerText = "もう一度遊ぶ";
+                adMid.style.display = "flex";
+                menuScreen.style.display = "flex";
+                menuScreen.scrollTop = 0;
             }, 1200);
         }
 
-        // 広告更新ロジックをより確実に
         function refreshAds() {
             const top = document.getElementById('frame-top');
             const bottom = document.getElementById('frame-bottom');
             if(top) top.src = top.src;
             if(bottom) bottom.src = bottom.src;
-            console.log("Ads Refreshed");
         }
         setInterval(refreshAds, 30000);
 
-        window.onload = () => { 
-            document.getElementById("end-menu").style.display = "flex"; 
-        };
+        window.onload = () => { menuScreen.style.display = "flex"; };
     </script>
 </body>
 </html>
